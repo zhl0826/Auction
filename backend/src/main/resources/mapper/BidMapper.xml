@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.BidMapper">
+    <resultMap id="map" type="com.example.entity.Bid">
+        <id property="id" column="id"/>
+        <result property="goodsId" column="goods_id"/>
+        <result property="goodsTitle" column="goods_title"/>
+        <result property="bidderId" column="bidder_id"/>
+        <result property="bidder" column="bidder_name"/>
+        <result property="price" column="price"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="listByGoods" resultMap="map">
+        SELECT b.*, g.title AS goods_title, u.username AS bidder_name
+        FROM bid b
+        LEFT JOIN goods g ON b.goods_id = g.id
+        LEFT JOIN user u ON b.bidder_id = u.id
+        WHERE b.goods_id = #{goodsId}
+        ORDER BY b.price DESC, b.id ASC
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO bid(goods_id, bidder_id, price, created_at)
+        VALUES (#{goodsId}, #{bidderId}, #{price}, NOW())
+    </insert>
+
+    <select id="listByBidder" resultMap="map">
+        SELECT b.*, g.title AS goods_title, u.username AS bidder_name
+        FROM bid b
+        LEFT JOIN goods g ON b.goods_id = g.id
+        LEFT JOIN user u ON b.bidder_id = u.id
+        WHERE b.bidder_id = #{bidderId}
+        ORDER BY b.id DESC
+    </select>
+
+</mapper>

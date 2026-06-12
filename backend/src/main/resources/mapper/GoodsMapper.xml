@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.GoodsMapper">
+    <resultMap id="map" type="com.example.entity.Goods">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="type" column="type"/>
+        <result property="sellerId" column="seller_id"/>
+        <result property="sellerName" column="seller_name"/>
+        <result property="startPrice" column="start_price"/>
+        <result property="currentPrice" column="current_price"/>
+        <result property="minIncrement" column="min_increment"/>
+        <result property="cover" column="cover"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="rejectReason" column="reject_reason"/>
+        <result property="endAt" column="end_at"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="listByStatus" resultMap="map">
+        SELECT g.*, u.nickname AS seller_name
+        FROM goods g LEFT JOIN user u ON g.seller_id = u.id
+        <where>
+            <if test="status != null and status != ''">g.status = #{status}</if>
+            <if test="keyword != null and keyword != ''">AND g.title LIKE CONCAT('%', #{keyword}, '%')</if>
+            <if test="type != null and type != ''">AND g.type = #{type}</if>
+        </where>
+        ORDER BY g.id DESC
+    </select>
+
+    <update id="updateStatus">
+        UPDATE goods SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateReject">
+        UPDATE goods SET status = 'rejected', reject_reason = #{reason} WHERE id = #{id}
+    </update>
+
+    <select id="findById" resultMap="map">
+        SELECT g.*, u.nickname AS seller_name
+        FROM goods g LEFT JOIN user u ON g.seller_id = u.id
+        WHERE g.id = #{id}
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO goods(title, type, seller_id, start_price, current_price, min_increment, cover, description, status, end_at, created_at)
+        VALUES (#{title}, #{type}, #{sellerId}, #{startPrice}, #{currentPrice}, #{minIncrement}, #{cover}, #{description}, #{status}, #{endAt}, NOW())
+    </insert>
+
+    <select id="listBySeller" resultMap="map">
+        SELECT g.*, u.nickname AS seller_name
+        FROM goods g LEFT JOIN user u ON g.seller_id = u.id
+        WHERE g.seller_id = #{sellerId}
+        ORDER BY g.id DESC
+    </select>
+
+    <update id="updatePrice">
+        UPDATE goods SET current_price = #{price} WHERE id = #{id}
+    </update>
+
+    <select id="listActive" resultMap="map">
+        SELECT g.*, u.nickname AS seller_name
+        FROM goods g LEFT JOIN user u ON g.seller_id = u.id
+        WHERE g.status = 'on_sale'
+        <if test="keyword != null and keyword != ''">
+            AND (g.title LIKE CONCAT('%', #{keyword}, '%') OR g.description LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="type != null and type != ''">AND g.type = #{type}</if>
+        ORDER BY g.id DESC
+    </select>
+
+</mapper>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.SysConfigMapper">
+    <resultMap id="map" type="com.example.entity.SysConfig">
+        <id property="id" column="id"/>
+        <result property="minIncrement" column="min_increment"/>
+        <result property="feeRate" column="fee_rate"/>
+    </resultMap>
+
+    <select id="get" resultMap="map">
+        SELECT * FROM sys_config WHERE id = 1
+    </select>
+
+    <update id="update" parameterType="com.example.entity.SysConfig">
+        UPDATE sys_config SET min_increment = #{minIncrement}, fee_rate = #{feeRate} WHERE id = 1
+    </update>
+</mapper>
