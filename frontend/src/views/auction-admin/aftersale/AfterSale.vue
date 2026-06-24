@@ -6,23 +6,76 @@ import type { AfterSaleItem } from '@/types'
 
 const list = ref<AfterSaleItem[]>([])
 const loading = ref(false)
+const processing = ref<Record<number, boolean>>({})
+
+function statusLabel(s: string) {
+  if (s === 'pending') return '待处理'
+  if (s === 'refunded') return '已退款'
+  if (s === 'rejected') return '已驳回'
+  return s
+}
+function statusType(s: string): 'warning' | 'success' | 'info' | 'danger' {
+  if (s === 'pending') return 'warning'
+  if (s === 'refunded') return 'success'
+  if (s === 'rejected') return 'danger'
+  return 'info'
+}
 
 async function fetch() {
   loading.value = true
-  try { list.value = await listAfterSales() } finally { loading.value = false }
+  try {
+    list.value = await listAfterSales()
+  } catch (e: any) {
+    ElMessage.error('加载失败: ' + (e?.message || e))
+  } finally {
+    loading.value = false
+  }
 }
 
 async function doRefund(row: AfterSaleItem) {
-  await ElMessageBox.confirm('确认同意订单 ' + row.orderId + ' 的退款？', '提示', { type: 'success' })
-  await refund(row.id)
-  row.status = 'refunded'
-  ElMessage.success('已退款')
+  if (processing.value[row.id]) return
+  try {
+    await ElMessageBox.confirm(
+      '确认同意订单 ' + row.orderId + ' 的退款？',
+      '提示',
+      { type: 'success' }
+    )
+  } catch {
+    return
+  }
+  processing.value[row.id] = true
+  try {
+    await refund(row.id)
+    row.status = 'refunded'
+    ElMessage.success('已退款')
+  } catch (e: any) {
+    ElMessage.error('退款失败: ' + (e?.message || e))
+  } finally {
+    processing.value[row.id] = false
+  }
 }
+
 async function doReject(row: AfterSaleItem) {
-  await ElMessageBox.confirm('确认驳回该售后申请？', '提示', { type: 'warning' })
-  await rejectAfterSale(row.id)
-  row.status = 'rejected'
-  ElMessage.success('已驳回')
+  if (processing.value[row.id]) return
+  try {
+    await ElMessageBox.confirm(
+      '确认驳回该售后申请？',
+      '提示',
+      { type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  processing.value[row.id] = true
+  try {
+    await rejectAfterSale(row.id)
+    row.status = 'rejected'
+    ElMessage.success('已驳回')
+  } catch (e: any) {
+    ElMessage.error('驳回失败: ' + (e?.message || e))
+  } finally {
+    processing.value[row.id] = false
+  }
 }
 
 onMounted(fetch)
@@ -39,8 +92,8 @@ onMounted(fetch)
       <el-table-column prop="reason" label="售后原因" />
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
-          <el-tag :type="row.status === 'pending' ? 'warning' : row.status === 'refunded' ? 'success' : 'info'">
-            {{ row.status === 'pending' ? '待处理' : row.status === 'refunded' ? '已退款' : '已驳回' }}
+          <el-tag :type="statusType(row.status)" disable-transitions>
+            {{ statusLabel(row.status) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -48,8 +101,18 @@ onMounted(fetch)
       <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
           <template v-if="row.status === 'pending'">
-            <el-button size="small" type="success" @click="doRefund(row)">同意退款</el-button>
-            <el-button size="small" type="danger" @click="doReject(row)">驳回</el-button>
+            <el-button
+              size="small"
+              type="success"
+              :loading="processing[row.id]"
+              @click="doRefund(row)"
+            >同意退款</el-button>
+            <el-button
+              size="small"
+              type="danger"
+              :loading="processing[row.id]"
+              @click="doReject(row)"
+            >驳回</el-button>
           </template>
           <span v-else style="color: #909399">已处理</span>
         </template>

@@ -1,72 +1,67 @@
 <template>
   <view class="auction-page">
-    <!-- 筛选与搜索栏 -->
+    <!-- 筛选与搜索 -->
     <view class="filter-bar">
       <view class="filter-row">
         <picker class="picker" :range="typeOptions" @change="onTypeChange">
           <view class="picker-value">{{ typeText }}</view>
         </picker>
         <view class="search-box">
-          <input class="search-input" v-model="keyword" placeholder="搜索商品名称/描述" @input="debounceSearch" />
+          <input class="search-input" v-model="keyword" placeholder="搜索商品名称" @input="debounceSearch" />
           <text class="search-icon">🔍</text>
         </view>
       </view>
     </view>
 
-    <!-- 表格表头 -->
-    <view class="table-header">
-      <view class="th col-index">#</view>
-      <view class="th col-img">图片</view>
-      <view class="th col-name">名称</view>
-      <view class="th col-type">类型</view>
-      <view class="th col-price sortable" @tap="sortBy('price')">
-        起拍价 <text class="sort-arrow">{{ sortPriceArrow }}</text>
-      </view>
-      <view class="th col-maxprice">当前最高</view>
-      <view class="th col-time sortable" @tap="sortBy('time')">
-        结束时间 <text class="sort-arrow">{{ sortTimeArrow }}</text>
-      </view>
-      <view class="th col-seller">卖家</view>
-      <view class="th col-action">操作</view>
-    </view>
-
-    <!-- 商品列表 -->
-    <scroll-view class="item-list" scroll-y>
-      <view class="item-card" v-for="(item, idx) in displayList" :key="item.id">
-        <view class="col-index">{{ idx + 1 }}</view>
-        <view class="col-img">
-          <image class="thumb" :src="item.cover || '/static/noimage.png'" mode="aspectFill"
-            @mouseenter="showDesc(item)" @mouseleave="hideDesc" />
-          <view class="desc-popup" v-if="hoverItem && hoverItem.id === item.id">
-            <text class="desc-text">{{ item.description }}</text>
+    <!-- 卡片列表 -->
+    <view class="card-list">
+      <view v-for="(item, idx) in displayList" :key="item.id" class="card" @tap="goDetail(item)">
+        <view class="card-img-wrap">
+          <image class="card-img" :src="item.cover || '/static/noimage.png'" mode="aspectFill" />
+          <view class="card-type">{{ item.type }}</view>
+        </view>
+        <view class="card-body">
+          <text class="card-title">{{ item.title }}</text>
+          <view class="card-price-row">
+            <view class="price-block">
+              <text class="price-label">起拍价</text>
+              <text class="price-value">¥{{ item.startPrice }}</text>
+            </view>
+            <view class="price-block price-block-high">
+              <text class="price-label">当前最高</text>
+              <text class="price-value price-value-high">¥{{ item.currentPrice }}</text>
+            </view>
+          </view>
+          <view class="card-footer">
+            <text class="card-time">⏰ {{ formatTime(item.endAt) }}</text>
+            <button class="btn-bid" @tap.stop="showBidDialog(item)">立即竞拍</button>
           </view>
         </view>
-        <view class="col-name">{{ item.title }}</view>
-        <view class="col-type"><text class="type-tag">{{ item.type }}</text></view>
-        <view class="col-price">{{ item.startPrice }}</view>
-        <view class="col-maxprice price-high">{{ item.currentPrice }}</view>
-        <view class="col-time">{{ item.endAt }}</view>
-        <view class="col-seller">{{ item.sellerName }}</view>
-        <view class="col-action">
-          <button class="btn-bid" @tap="showBidDialog(item)">立即竞拍</button>
-        </view>
       </view>
-      <view class="loading" v-if="loading"><text>加载中...</text></view>
-      <view class="empty-tip" v-else-if="displayList.length === 0">
+
+      <view v-if="loading" class="loading"><text>加载中...</text></view>
+      <view v-else-if="displayList.length === 0" class="empty-tip">
         <text>暂无符合条件的拍卖品</text>
       </view>
-    </scroll-view>
+    </view>
 
     <!-- 竞拍弹窗 -->
-    <view class="modal-overlay" v-if="bidVisible" @tap="closeBidDialog">
+    <view v-if="bidVisible" class="modal-overlay" @tap="closeBidDialog">
       <view class="modal-content" @tap.stop>
         <view class="modal-title">出价竞拍</view>
         <view class="bid-info">
-          <text>商品：{{ bidItem?.title }}</text>
-          <text>当前最高价：¥{{ bidItem?.currentPrice }}</text>
-          <text>您的余额：¥{{ currentBalance }}</text>
+          <text class="bid-info-label">商品</text>
+          <text class="bid-info-value">{{ bidItem?.title }}</text>
         </view>
-        <input class="bid-input" v-model="bidAmount" type="number" placeholder="请输入出价金额" />
+        <view class="bid-info">
+          <text class="bid-info-label">当前最高价</text>
+          <text class="bid-info-value bid-info-high">¥{{ bidItem?.currentPrice }}</text>
+        </view>
+        <view class="bid-info">
+          <text class="bid-info-label">您的余额</text>
+          <text class="bid-info-value">¥{{ currentBalance }}</text>
+        </view>
+        <input class="bid-input" v-model="bidAmount" type="digit" placeholder="请输入出价金额" />
         <view class="modal-actions">
           <button class="btn-cancel" @tap="closeBidDialog">取消</button>
           <button class="btn-confirm" @tap="confirmBid">确认出价</button>
@@ -77,7 +72,7 @@
 </template>
 
 <script>
-import { apiGoodsList, apiPlaceBid, apiGetProfile } from "../../utils/api";
+import { apiGoodsList, apiPlaceBid, apiGetProfile, apiGoodsDetail } from "../../utils/api";
 import { getCurrentUserId } from "../../utils/storage";
 
 const TYPE_OPTIONS = ["全部", "数码", "古董", "书画", "珠宝", "奢侈品", "收藏品"];
@@ -88,23 +83,18 @@ export default {
       typeOptions: TYPE_OPTIONS,
       typeIndex: 0,
       keyword: "",
-      sortField: "",
-      sortOrder: 1,
       displayList: [],
       allItems: [],
       bidVisible: false,
       bidItem: null,
       bidAmount: "",
-      hoverItem: null,
       searchTimer: null,
       loading: false,
       currentBalance: 0
     };
   },
   computed: {
-    typeText() { return TYPE_OPTIONS[this.typeIndex] || "全部"; },
-    sortPriceArrow() { return this.sortField !== "price" ? "⇅" : this.sortOrder === 1 ? "↑" : "↓"; },
-    sortTimeArrow() { return this.sortField !== "time" ? "⇅" : this.sortOrder === 1 ? "↑" : "↓"; }
+    typeText() { return TYPE_OPTIONS[this.typeIndex] || "全部"; }
   },
   onShow() {
     this.checkLogin();
@@ -116,6 +106,10 @@ export default {
         uni.showToast({ title: "请先登录", icon: "none" });
         setTimeout(() => uni.redirectTo({ url: "/pages/login/login" }), 500);
       }
+    },
+    formatTime(t) {
+      if (!t) return "";
+      return t.replace("T", " ").substring(0, 16);
     },
     async loadItems() {
       this.loading = true;
@@ -129,7 +123,7 @@ export default {
         });
         this.applyFilter();
       } catch (e) {
-        uni.showToast({ title: "加载失败: " + e.message, icon: "none" });
+        uni.showToast({ title: "加载失败: " + (e?.message || ""), icon: "none" });
       } finally {
         this.loading = false;
       }
@@ -141,15 +135,7 @@ export default {
       }
       if (this.keyword.trim()) {
         const kw = this.keyword.trim();
-        list = list.filter(item => {
-          return (item.title && item.title.indexOf(kw) !== -1) ||
-                 (item.description && item.description.indexOf(kw) !== -1);
-        });
-      }
-      if (this.sortField === "price") {
-        list.sort((a, b) => this.sortOrder * (a.startPrice - b.startPrice));
-      } else if (this.sortField === "time") {
-        list.sort((a, b) => this.sortOrder * (new Date(a.endAt) - new Date(b.endAt)));
+        list = list.filter(item => item.title && item.title.indexOf(kw) !== -1);
       }
       this.displayList = list;
     },
@@ -161,24 +147,14 @@ export default {
       this.typeIndex = parseInt(e.detail.value);
       this.applyFilter();
     },
-    sortBy(field) {
-      if (this.sortField === field) {
-        this.sortOrder = -this.sortOrder;
-      } else {
-        this.sortField = field;
-        this.sortOrder = field === "price" ? 1 : -1;
-      }
-      this.applyFilter();
+    goDetail(item) {
+      uni.navigateTo({ url: "/pages/auction/detail?id=" + item.id });
     },
-    showDesc(item) { this.hoverItem = item; },
-    hideDesc() { this.hoverItem = null; },
-
     async showBidDialog(item) {
       if (!getCurrentUserId()) {
         uni.showToast({ title: "请先登录", icon: "none" });
         return setTimeout(() => uni.redirectTo({ url: "/pages/login/login" }), 500);
       }
-      // 获取当前余额
       try {
         const profile = await apiGetProfile();
         this.currentBalance = profile.balance || 0;
@@ -202,19 +178,19 @@ export default {
 
       try {
         await apiPlaceBid(this.bidItem.id, amount);
-        uni.showToast({ title: "竞拍成功！", icon: "success" });
+        uni.showToast({ title: "竞拍成功", icon: "success" });
         this.closeBidDialog();
         this.loadItems();
       } catch (e) {
-        if (e.message.indexOf("余额不足") !== -1) {
+        if (e.message && e.message.indexOf("余额不足") !== -1) {
           uni.showModal({
             title: "余额不足",
-            content: e.message + "，请先充值。",
+            content: e.message + "，请先充值",
             confirmText: "去充值",
             success: (r) => { if (r.confirm) uni.switchTab({ url: "/pages/user/user" }); }
           });
         } else {
-          uni.showToast({ title: e.message, icon: "none" });
+          uni.showToast({ title: e?.message || "操作失败", icon: "none" });
         }
       }
     }
@@ -232,17 +208,17 @@ export default {
   background: #fff;
   border-radius: 16rpx;
   padding: 20rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
 }
 .filter-row { display: flex; align-items: center; gap: 20rpx; }
 .picker {
   flex-shrink: 0;
   background: #f0f0f0;
-  padding: 16rpx 24rpx;
+  padding: 14rpx 24rpx;
   border-radius: 12rpx;
   font-size: 26rpx;
-  min-width: 120rpx;
+  min-width: 100rpx;
   text-align: center;
 }
 .picker-value { color: #333; }
@@ -262,79 +238,120 @@ export default {
   transform: translateY(-50%);
   font-size: 28rpx;
 }
-.table-header {
+.card-list {
   display: flex;
-  background: #fff;
-  padding: 20rpx 16rpx;
-  border-radius: 12rpx 12rpx 0 0;
-  font-size: 24rpx;
-  font-weight: 600;
-  color: #666;
-  border-bottom: 2rpx solid #eee;
+  flex-direction: column;
+  gap: 24rpx;
 }
-.th { text-align: center; }
-.th.sortable { color: #007AFF; cursor: pointer; }
-.sort-arrow { font-size: 20rpx; margin-left: 4rpx; }
-.col-index { width: 5%; }
-.col-img { width: 10%; }
-.col-name { width: 14%; }
-.col-type { width: 8%; }
-.col-price { width: 10%; }
-.col-maxprice { width: 10%; }
-.col-time { width: 18%; }
-.col-seller { width: 10%; }
-.col-action { width: 15%; }
-.item-list { max-height: calc(100vh - 320rpx); }
-.item-card {
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
   display: flex;
-  align-items: center;
-  background: #fff;
-  padding: 16rpx;
-  border-bottom: 2rpx solid #f0f0f0;
-  font-size: 24rpx;
-  color: #333;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
 }
-.item-card:last-child { border-radius: 0 0 12rpx 12rpx; }
-.thumb {
-  width: 70rpx; height: 70rpx;
-  border-radius: 8rpx;
+.card:active {
+  background: #f9f9f9;
+}
+.card-img-wrap {
+  width: 220rpx;
+  height: 220rpx;
+  flex-shrink: 0;
+  position: relative;
   background: #e0e0e0;
 }
-.col-img { position: relative; }
-.desc-popup {
+.card-img {
+  width: 100%;
+  height: 100%;
+}
+.card-type {
   position: absolute;
-  left: 100%; top: -20rpx;
-  z-index: 100;
-  width: 360rpx;
-  background: #333;
+  top: 12rpx;
+  left: 12rpx;
+  background: rgba(0,122,255,0.85);
   color: #fff;
-  padding: 16rpx;
-  border-radius: 10rpx;
-  font-size: 22rpx;
-  line-height: 1.6;
-  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.2);
-  word-break: break-all;
-}
-.desc-text { color: #fff; }
-.type-tag {
-  background: #e8f0fe;
-  color: #007AFF;
+  font-size: 20rpx;
   padding: 4rpx 12rpx;
-  border-radius: 8rpx;
-  font-size: 22rpx;
+  border-radius: 6rpx;
 }
-.price-high { color: #e74c3c; font-weight: 600; }
-.btn-bid {
+.card-body {
+  flex: 1;
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+.card-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  margin-bottom: 12rpx;
+}
+.card-price-row {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 12rpx;
+}
+.price-block {
+  flex: 1;
+  background: #f5f5f5;
+  border-radius: 10rpx;
+  padding: 10rpx 12rpx;
+  min-width: 0;
+}
+.price-block-high {
+  background: #fff3f0;
+}
+.price-label {
+  font-size: 20rpx;
+  color: #999;
+  display: block;
+  margin-bottom: 4rpx;
+}
+.price-value {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+}
+.price-value-high {
+  color: #e74c3c;
+}
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+.card-time {
   font-size: 22rpx;
+  color: #999;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btn-bid {
+  flex-shrink: 0;
+  font-size: 24rpx;
   background: linear-gradient(135deg, #ff6b35, #e74c3c);
   color: #fff;
-  padding: 8rpx 20rpx;
-  border-radius: 10rpx;
-  line-height: 1.8;
+  padding: 10rpx 24rpx;
+  border-radius: 24rpx;
+  line-height: 1.4;
   border: none;
-  white-space: nowrap;
+  font-weight: 500;
 }
 .btn-bid::after { border: none; }
+.loading { text-align: center; padding: 60rpx; color: #999; font-size: 28rpx; }
+.empty-tip { text-align: center; padding: 100rpx 0; color: #999; font-size: 28rpx; }
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -355,14 +372,19 @@ export default {
   font-weight: 600;
   text-align: center;
   margin-bottom: 32rpx;
+  color: #333;
 }
-.bid-info { margin-bottom: 24rpx; }
-.bid-info text {
-  display: block;
+.bid-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
   font-size: 26rpx;
-  color: #666;
-  margin-bottom: 8rpx;
 }
+.bid-info-label { color: #999; }
+.bid-info-value { color: #333; font-weight: 500; }
+.bid-info-high { color: #e74c3c; font-weight: 600; }
 .bid-input {
   width: 100%;
   height: 80rpx;
@@ -371,21 +393,19 @@ export default {
   padding: 0 20rpx;
   font-size: 32rpx;
   box-sizing: border-box;
-  margin-bottom: 32rpx;
+  margin: 24rpx 0;
 }
 .modal-actions { display: flex; gap: 20rpx; }
 .btn-cancel {
   flex: 1; height: 76rpx; line-height: 76rpx;
   background: #f0f0f0; color: #666;
-  border-radius: 12rpx; font-size: 28rpx; text-align: center;
+  border-radius: 12rpx; font-size: 28rpx;
 }
 .btn-cancel::after { border: none; }
 .btn-confirm {
   flex: 1; height: 76rpx; line-height: 76rpx;
-  background: #007AFF; color: #fff;
-  border-radius: 12rpx; font-size: 28rpx; text-align: center;
+  background: linear-gradient(135deg, #ff6b35, #e74c3c); color: #fff;
+  border-radius: 12rpx; font-size: 28rpx;
 }
 .btn-confirm::after { border: none; }
-.loading { text-align: center; padding: 60rpx; color: #999; }
-.empty-tip { text-align: center; padding: 80rpx 0; color: #999; font-size: 28rpx; }
 </style>

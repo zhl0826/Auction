@@ -7,7 +7,7 @@ import type { UserItem } from '@/types'
 const list = ref<UserItem[]>([])
 const loading = ref(false)
 const total = ref(0)
-const query = reactive({ keyword: '', role: '' as '' | 'buyer' | 'seller', status: '' as '' | 'active' | 'banned' })
+const query = reactive({ keyword: '', status: '' as '' | 'active' | 'banned' })
 const page = reactive({ current: 1, size: 10 })
 
 async function fetch() {
@@ -21,7 +21,8 @@ async function fetch() {
 
 async function toggleBan(row: UserItem) {
   const next = row.status === 'banned' ? 'active' : 'banned'
-  await ElMessageBox.confirm('确认' + (next === 'banned' ? '封禁' : '解封') + '用户 ' + row.username + ' ？', '提示', { type: 'warning' })
+  const action = next === 'banned' ? '封禁' : '解封'
+  await ElMessageBox.confirm('确认 ' + action + ' 用户 ' + row.username + ' ？', '提示', { type: 'warning' })
   await updateUserStatus(row.id, next)
   row.status = next
   ElMessage.success('操作成功')
@@ -34,27 +35,18 @@ onMounted(fetch)
   <div class="page-card">
     <div class="toolbar">
       <el-input v-model="query.keyword" placeholder="搜索账号/昵称" clearable style="width: 220px" @keyup.enter="fetch" />
-      <el-select v-model="query.role" placeholder="角色" clearable style="width: 140px" @change="fetch">
-        <el-option label="买家" value="buyer" />
-        <el-option label="卖家" value="seller" />
-      </el-select>
       <el-select v-model="query.status" placeholder="状态" clearable style="width: 140px" @change="fetch">
         <el-option label="正常" value="active" />
         <el-option label="封禁" value="banned" />
       </el-select>
       <el-button type="primary" @click="fetch">查询</el-button>
-      <el-button @click="() => { query.keyword=''; query.role=''; query.status=''; page.current=1; fetch() }">重置</el-button>
+      <el-button @click="() => { query.keyword=''; query.status=''; page.current=1; fetch() }">重置</el-button>
     </div>
 
     <el-table v-loading="loading" :data="list" border stripe>
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="username" label="账号" />
       <el-table-column prop="nickname" label="昵称" />
-      <el-table-column label="角色" width="80">
-        <template #default="{ row }">
-          <el-tag :type="row.role === 'buyer' ? 'success' : 'warning'">{{ row.role === 'buyer' ? '买家' : '卖家' }}</el-tag>
-        </template>
-      </el-table-column>
       <el-table-column prop="balance" label="余额" width="120" />
       <el-table-column label="状态" width="100">
         <template #default="{ row }">

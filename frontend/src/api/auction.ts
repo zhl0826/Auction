@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { GoodsItem, BidItem, AfterSaleItem } from '@/types'
+import type { GoodsItem, BidItem, AfterSaleItem, OrderItem } from '@/types'
 
 export const listPending = (params: { keyword?: string; type?: string }) =>
   request.get<GoodsItem[], any>('/auction/goods/pending', { params })
@@ -20,3 +20,7 @@ export const listBids = (goodsId: number) =>
 export const listAfterSales = () => request.get<AfterSaleItem[], any>('/auction/aftersales')
 export const refund = (id: number) => request.put(`/auction/aftersales/${id}/refund`)
 export const rejectAfterSale = (id: number) => request.put(`/auction/aftersales/${id}/reject`)
+
+
+export const listOrders = (status = 'paid') =>
+  request.get<OrderItem[], any>('/auction/orders', { params: { status } })

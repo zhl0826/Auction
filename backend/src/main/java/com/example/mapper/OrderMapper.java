@@ -10,4 +10,8 @@ public interface OrderMapper {
     List<Order> listByBuyer(@Param("buyerId") Long buyerId);
     List<Order> listBySeller(@Param("sellerId") Long sellerId);
     Order findById(@Param("id") Long id);
+    Order findByGoodsIdAndBuyer(@Param("goodsId") Long goodsId, @Param("buyerId") Long buyerId);
+    int updateStatus(@Param("id") Long id, @Param("status") String status);
+    int updateAfterSaleStatus(@Param("id") Long id, @Param("status") String status);
+    List<Order> listAll(@Param("status") String status);
 }

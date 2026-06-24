@@ -25,7 +25,8 @@ const router = createRouter({
         { path: 'review', name: 'auction-review', component: () => import('@/views/auction-admin/review/Review.vue'), meta: { title: '商品审核', icon: 'Document' } },
         { path: 'onsale', name: 'auction-onsale', component: () => import('@/views/auction-admin/onsale/OnSale.vue'), meta: { title: '已上架商品', icon: 'Goods' } },
         { path: 'history', name: 'auction-history', component: () => import('@/views/auction-admin/history/History.vue'), meta: { title: '竞拍历史', icon: 'Histogram', hidden: true } },
-        { path: 'aftersale', name: 'auction-aftersale', component: () => import('@/views/auction-admin/aftersale/AfterSale.vue'), meta: { title: '售后处理', icon: 'Service' } }
+        { path: 'aftersale', name: 'auction-aftersale', component: () => import('@/views/auction-admin/aftersale/AfterSale.vue'), meta: { title: '售后处理', icon: 'Service' } },
+    { path: 'orders', name: 'auction-orders', component: () => import('@/views/auction-admin/orders/Orders.vue'), meta: { title: '已成交商品', icon: 'List' } }
       ]
     },
     { path: '/', redirect: '/login' },

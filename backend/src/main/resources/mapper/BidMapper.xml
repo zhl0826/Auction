@@ -8,6 +8,8 @@
         <result property="bidderId" column="bidder_id"/>
         <result property="bidder" column="bidder_name"/>
         <result property="price" column="price"/>
+        <result property="status" column="status"/>
+        <result property="refunded" column="refunded"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
@@ -20,8 +22,8 @@
         ORDER BY b.price DESC, b.id ASC
     </select>
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO bid(goods_id, bidder_id, price, created_at)
-        VALUES (#{goodsId}, #{bidderId}, #{price}, NOW())
+        INSERT INTO bid(goods_id, bidder_id, price, status, refunded, created_at)
+        VALUES (#{goodsId}, #{bidderId}, #{price}, 'active', 0, NOW())
     </insert>
 
     <select id="listByBidder" resultMap="map">
@@ -32,5 +34,21 @@
         WHERE b.bidder_id = #{bidderId}
         ORDER BY b.id DESC
     </select>
+
+    <select id="findById" resultMap="map">
+        SELECT b.*, g.title AS goods_title, u.username AS bidder_name
+        FROM bid b
+        LEFT JOIN goods g ON b.goods_id = g.id
+        LEFT JOIN user u ON b.bidder_id = u.id
+        WHERE b.id = #{id}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE bid SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateRefunded">
+        UPDATE bid SET refunded = #{refunded} WHERE id = #{id}
+    </update>
 
 </mapper>

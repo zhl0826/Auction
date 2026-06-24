@@ -4,9 +4,11 @@ import com.example.common.Result;
 import com.example.entity.AfterSale;
 import com.example.entity.Bid;
 import com.example.entity.Goods;
+import com.example.entity.Order;
 import com.example.service.AfterSaleService;
 import com.example.service.BidService;
 import com.example.service.GoodsService;
+import com.example.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +22,7 @@ public class AuctionAdminController {
     @Autowired private GoodsService goodsService;
     @Autowired private BidService bidService;
     @Autowired private AfterSaleService afterSaleService;
+    @Autowired private OrderService orderService;
 
     // ========== 商品审核 ==========
     @GetMapping("/goods/pending")
@@ -70,4 +73,11 @@ public class AuctionAdminController {
 
     @PutMapping("/aftersales/{id}/reject")
     public Result<Void> rejectAfterSale(@PathVariable Long id) { afterSaleService.reject(id); return Result.ok(); }
+
+    // ========== 已成交订单 ==========
+    @GetMapping("/orders")
+    public Result<List<Order>> orders(@RequestParam(required = false) String status) {
+        String s = (status == null || status.isEmpty()) ? "paid" : status;
+        return Result.ok(orderService.listByStatus(s));
+    }
 }

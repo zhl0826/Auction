@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.BillMapper">
+    <resultMap id="map" type="com.example.entity.Bill">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="type" column="type"/>
+        <result property="amount" column="amount"/>
+        <result property="balanceAfter" column="balance_after"/>
+        <result property="relatedType" column="related_type"/>
+        <result property="relatedId" column="related_id"/>
+        <result property="memo" column="memo"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO bill(user_id, type, amount, balance_after, related_type, related_id, memo, created_at)
+        VALUES (#{userId}, #{type}, #{amount}, #{balanceAfter}, #{relatedType}, #{relatedId}, #{memo}, NOW())
+    </insert>
+
+    <select id="listByUser" resultMap="map">
+        SELECT * FROM bill WHERE user_id = #{userId}
+        <if test="type != null and type != ''">AND type = #{type}</if>
+        ORDER BY id DESC
+        <if test="limit != null and limit > 0">LIMIT #{limit}</if>
+    </select>
+</mapper>

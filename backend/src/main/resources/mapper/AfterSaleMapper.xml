@@ -26,4 +26,20 @@
     <update id="updateStatus">
         UPDATE after_sale SET status = #{status} WHERE id = #{id}
     </update>
+
+    <select id="findById" resultMap="map">
+        SELECT a.*, g.title AS goods_title,
+               ub.username AS buyer_name, us.username AS seller_name
+        FROM after_sale a
+        LEFT JOIN `order` o ON a.order_id = o.id
+        LEFT JOIN goods g ON o.goods_id = g.id
+        LEFT JOIN user ub ON o.buyer_id = ub.id
+        LEFT JOIN user us ON o.seller_id = us.id
+        WHERE a.id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO after_sale(order_id, reason, status, created_at)
+        VALUES (#{orderId}, #{reason}, #{status}, NOW())
+    </insert>
 </mapper>

@@ -15,6 +15,8 @@
         <result property="status" column="status"/>
         <result property="rejectReason" column="reject_reason"/>
         <result property="endAt" column="end_at"/>
+        <result property="currentBidderId" column="current_bidder_id"/>
+        <result property="currentBidderName" column="current_bidder_name"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
@@ -59,8 +61,11 @@
     </update>
 
     <select id="listActive" resultMap="map">
-        SELECT g.*, u.nickname AS seller_name
-        FROM goods g LEFT JOIN user u ON g.seller_id = u.id
+        SELECT g.*, u.nickname AS seller_name,
+               cb.nickname AS current_bidder_name
+        FROM goods g
+        LEFT JOIN user u ON g.seller_id = u.id
+        LEFT JOIN user cb ON g.current_bidder_id = cb.id
         WHERE g.status = 'on_sale'
         <if test="keyword != null and keyword != ''">
             AND (g.title LIKE CONCAT('%', #{keyword}, '%') OR g.description LIKE CONCAT('%', #{keyword}, '%'))
@@ -69,4 +74,30 @@
         ORDER BY g.id DESC
     </select>
 
+
+    <update id="updateCurrentBidder">
+        UPDATE goods SET current_bidder_id = #{bidderId} WHERE id = #{id}
+    </update>
+
+    <select id="listByStatusIncludingRemoved" resultMap="map">
+        SELECT g.*, u.nickname AS seller_name,
+               cb.nickname AS current_bidder_name
+        FROM goods g
+        LEFT JOIN user u ON g.seller_id = u.id
+        LEFT JOIN user cb ON g.current_bidder_id = cb.id
+        WHERE g.seller_id = #{sellerId}
+        <if test="status != null and status != ''">AND g.status = #{status}</if>
+        <if test="keyword != null and keyword != ''">AND g.title LIKE CONCAT('%', #{keyword}, '%')</if>
+        ORDER BY g.id DESC
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM goods WHERE id = #{id}
+    </delete>
+
+
+    <update id="updateEndAt">
+        UPDATE goods SET end_at = #{endAt} WHERE id = #{id}
+    </update>
 </mapper>
+
