@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.OrderMapper">
+    <resultMap id="map" type="com.example.entity.Order">
+        <id property="id" column="id"/>
+        <result property="goodsId" column="goods_id"/>
+        <result property="goodsTitle" column="goods_title"/>
+        <result property="goodsCover" column="goods_cover"/>
+        <result property="buyerId" column="buyer_id"/>
+        <result property="buyerName" column="buyer_name"/>
+        <result property="sellerId" column="seller_id"/>
+        <result property="sellerName" column="seller_name"/>
+        <result property="amount" column="amount"/>
+        <result property="fee" column="fee"/>
+        <result property="status" column="status"/>
+        <result property="afterSaleStatus" column="after_sale_status"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `order`(goods_id, goods_title, buyer_id, seller_id, amount, fee, status, created_at)
+        VALUES (#{goodsId}, #{goodsTitle}, #{buyerId}, #{sellerId}, #{amount}, #{fee}, #{status}, NOW())
+    </insert>
+    <select id="listByBuyer" resultMap="map">
+        SELECT o.*, u1.nickname AS buyer_name, u2.nickname AS seller_name
+        FROM `order` o LEFT JOIN user u1 ON o.buyer_id = u1.id LEFT JOIN user u2 ON o.seller_id = u2.id
+        WHERE o.buyer_id = #{buyerId} ORDER BY o.id DESC
+    </select>
+    <select id="listBySeller" resultMap="map">
+        SELECT o.*, u1.nickname AS buyer_name, u2.nickname AS seller_name
+        FROM `order` o LEFT JOIN user u1 ON o.buyer_id = u1.id LEFT JOIN user u2 ON o.seller_id = u2.id
+        WHERE o.seller_id = #{sellerId} ORDER BY o.id DESC
+    </select>
+    <select id="findById" resultMap="map">
+        SELECT o.*, u1.nickname AS buyer_name, u2.nickname AS seller_name
+        FROM `order` o LEFT JOIN user u1 ON o.buyer_id = u1.id LEFT JOIN user u2 ON o.seller_id = u2.id
+        WHERE o.id = #{id}
+    </select>
+
+    <select id="findByGoodsIdAndBuyer" resultMap="map">
+        SELECT o.*, u1.nickname AS buyer_name, u2.nickname AS seller_name
+        FROM `order` o LEFT JOIN user u1 ON o.buyer_id = u1.id LEFT JOIN user u2 ON o.seller_id = u2.id
+        WHERE o.goods_id = #{goodsId} AND o.buyer_id = #{buyerId} ORDER BY o.id DESC LIMIT 1
+    </select>
+
+    <update id="updateAfterSaleStatus">
+        UPDATE `order` SET after_sale_status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE `order` SET status = #{status} WHERE id = #{id}
+    </update>
+    <select id="listAll" resultMap="map">
+        SELECT o.*, u1.nickname AS buyer_name, u2.nickname AS seller_name, g.cover AS goods_cover
+        FROM `order` o
+        LEFT JOIN user u1 ON o.buyer_id = u1.id
+        LEFT JOIN user u2 ON o.seller_id = u2.id
+        LEFT JOIN goods g ON o.goods_id = g.id
+        WHERE o.status = #{status}
+        ORDER BY o.id DESC
+    </select>
+</mapper>
