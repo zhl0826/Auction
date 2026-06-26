@@ -9,10 +9,12 @@ import java.time.LocalDateTime;
 public class Bid {
     private Long id;
     private Long goodsId;
-    private String goodsTitle;      // 联表展示
+    private String goodsTitle;
     private Long bidderId;
-    private String bidder;          // 联表展示用户名
+    private String bidder;
     private BigDecimal price;
+    private String status;            // active / outbid / won / cancelled
+    private Boolean refunded;         // 是否已退款
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 }

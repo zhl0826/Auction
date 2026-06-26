@@ -13,6 +13,12 @@
       }
     },
     {
+      "path": "pages/auction/detail",
+      "style": {
+        "navigationBarTitleText": "商品详情"
+      }
+    },
+    {
       "path": "pages/shelf/shelf",
       "style": {
         "navigationBarTitleText": "上架商品"

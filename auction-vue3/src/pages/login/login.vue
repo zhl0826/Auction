@@ -19,7 +19,7 @@
           <text>自动登录</text>
         </view>
       </view>
-      <button class="btn-primary" @tap="handleLogin">登 录</button>
+      <button class="btn-primary" @tap="handleLogin">登录</button>
       <view class="switch-link">
         <text>还没有账号？</text>
         <text class="link" @tap="isRegister = true; clearForm()">立即注册</text>
@@ -45,7 +45,7 @@
         <text class="label">确认密码</text>
         <input class="input" v-model="regForm.confirmPwd" type="password" placeholder="再次输入密码" />
       </view>
-      <button class="btn-primary" @tap="handleRegister">注 册</button>
+      <button class="btn-primary" @tap="handleRegister">注册</button>
       <view class="switch-link">
         <text>已有账号？</text>
         <text class="link" @tap="isRegister = false; clearForm()">返回登录</text>
@@ -93,7 +93,7 @@ export default {
         uni.showToast({ title: "登录成功", icon: "success" });
         setTimeout(() => uni.switchTab({ url: "/pages/auction/auction" }), 500);
       } catch (e) {
-        uni.showToast({ title: e.message, icon: "none" });
+        const msg = String((e && e.message) || e || "登录失败"); console.log("[LOGIN_ERR]", JSON.stringify({msg, e, type: typeof e})); uni.showToast({ title: msg, icon: "none" });
       }
     },
     async handleRegister() {
@@ -111,7 +111,7 @@ export default {
         this.loginForm.password = "";
         this.regForm = { username: "", phone: "", password: "", confirmPwd: "" };
       } catch (e) {
-        uni.showToast({ title: e.message, icon: "none" });
+        const msg = String((e && e.message) || e || "登录失败"); console.log("[LOGIN_ERR]", JSON.stringify({msg, e, type: typeof e})); uni.showToast({ title: msg, icon: "none" });
       }
     }
   }

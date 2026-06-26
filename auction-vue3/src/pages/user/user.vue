@@ -1,4 +1,5 @@
-<template>
+﻿<template>
+
   <view class="user-page">
     <view v-if="!userId" class="login-tip">
       <text>请先登录</text>
@@ -29,103 +30,213 @@
         </view>
       </view>
 
-      <!-- Tab 切换 -->
-      <view class="tab-bar">
-        <view class="tab-item" v-for="tab in tabs" :key="tab.key"
-          :class="{ active: activeTab === tab.key }" @tap="switchTab(tab.key)">
+      <!-- Tab 栏 (横向滚动) -->
+      <scroll-view class="tab-bar" scroll-x :scroll-into-view="'tab-' + activeTab" :show-scrollbar="false">
+        <view v-for="tab in tabs" :key="tab.key" :id="'tab-' + tab.key"
+              :class="['tab-item', activeTab === tab.key && 'active']"
+              @tap="switchTab(tab.key)">
           <text>{{ tab.label }}</text>
         </view>
-      </view>
+      </scroll-view>
 
-      <!-- 我的上架 -->
-      <view class="section" v-if="activeTab === 'mine'">
+      <!-- 在售商品 -->
+      <view v-if="activeTab === 'mine'" class="section">
         <view class="item-list">
-          <view class="list-item" v-for="item in myItems" :key="item.id">
+          <view v-for="item in myItems" :key="item.id" class="list-item" @tap="goDetail(item.id)">
             <image class="list-thumb" :src="item.cover || '/static/noimage.png'" mode="aspectFill" />
             <view class="list-info">
               <text class="list-name">{{ item.title }}</text>
               <text class="list-detail">起拍价：¥{{ item.startPrice }} | 当前：¥{{ item.currentPrice }}</text>
-              <text class="list-detail">状态：{{ getStatusText(item) }}</text>
+              <text class="list-detail">状态：{{ statusMap[item.status] || item.status }}</text>
             </view>
-            <button v-if="item.status === 'on_sale' || item.status === 'pending'" class="btn-delist" @tap="delistItem(item)">下架</button>
+            <button v-if="item.status === 'on_sale'" class="btn-delist" @tap.stop="handleDelist(item.id)">下架</button>
             <text v-else class="status-tag">{{ statusMap[item.status] || item.status }}</text>
           </view>
-          <view class="empty" v-if="myItems.length === 0"><text>暂无上架商品</text></view>
+          <view v-if="myItems.length === 0" class="empty">
+            <text>暂无在售商品</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 已下架商品 -->
+      <view v-if="activeTab === 'offshelf'" class="section">
+        <view class="item-list">
+          <view v-for="item in offShelfItems" :key="item.id" class="list-item" @tap="goDetail(item.id)">
+            <image class="list-thumb" :src="item.cover || '/static/noimage.png'" mode="aspectFill" />
+            <view class="list-info">
+              <text class="list-name">{{ item.title }}</text>
+              <text class="list-detail">起拍价：¥{{ item.startPrice }} | 当前：¥{{ item.currentPrice }}</text>
+              <text class="list-detail">状态：{{ statusMap[item.status] || item.status }}</text>
+            </view>
+            <view class="btn-group">
+              <button class="btn-relist" @tap.stop="handleRelist(item.id)">重新上架</button>
+              <button class="btn-delete" @tap.stop="handleDelete(item.id)">删除</button>
+            </view>
+          </view>
+          <view v-if="offShelfItems.length === 0" class="empty">
+            <text>暂无已下架商品</text>
+          </view>
+        </view>
+      </view>
+
+
+      <!-- 已售出 -->
+      <view v-if="activeTab === 'sold'" class="section">
+        <view class="item-list">
+          <view v-for="item in soldItems" :key="item.id" class="list-item" @tap="goDetail(item.id)">
+            <image class="list-thumb" :src="item.cover || '/static/noimage.png'" mode="aspectFill" />
+            <view class="list-info">
+              <text class="list-name">{{ item.title }}</text>
+              <text class="list-detail">成交价：¥{{ item.currentPrice }}</text>
+              <text class="list-detail">状态：已售出</text>
+            </view>
+          </view>
+          <view v-if="soldItems.length === 0" class="empty">
+            <text>暂无已售出商品</text>
+          </view>
+        </view>
+      </view>
+
+
+      <!-- 审核中 -->
+      <view v-if="activeTab === 'pending'" class="section">
+        <view class="item-list">
+          <view v-for="item in pendingItems" :key="item.id" class="list-item">
+            <image class="list-thumb" :src="item.cover || '/static/noimage.png'" mode="aspectFill" />
+            <view class="list-info">
+              <text class="list-name">{{ item.title }}</text>
+              <text class="list-detail">起拍价：¥{{ item.startPrice }}</text>
+              <text class="list-detail">状态：待管理员审核</text>
+            </view>
+          </view>
+          <view v-if="pendingItems.length === 0" class="empty">
+            <text>暂无审核中商品</text>
+          </view>
         </view>
       </view>
 
       <!-- 我的竞拍 -->
-      <view class="section" v-if="activeTab === 'bids'">
+      <view v-if="activeTab === 'bids'" class="section">
         <view class="item-list">
-          <view class="list-item" v-for="bid in myBids" :key="bid.id">
+          <view v-for="bid in myBids" :key="bid.id" class="list-item">
             <view class="list-info full">
-              <text class="list-name">{{ bid.goodsTitle || bid.goodsId }}</text>
+              <text class="list-name">{{ bid.goodsTitle }}</text>
               <text class="list-detail">出价：¥{{ bid.price }}</text>
               <text class="list-detail">时间：{{ bid.createdAt }}</text>
-              <text class="list-status" :class="bid.isLeading ? 'leading' : 'outbid'">
-                {{ bid.isLeading ? "领先" : "出局" }}
-              </text>
+              <text :class="['list-status', bidStatusClass(bid)]">{{ bidStatusText(bid) }}</text>
             </view>
+            <button v-if="bid.status === 'active'" class="btn-cancel-bid" @tap="handleCancelBid(bid)">取消出价</button>
           </view>
-          <view class="empty" v-if="myBids.length === 0"><text>暂无竞拍记录</text></view>
+          <view v-if="myBids.length === 0" class="empty">
+            <text>暂无竞拍记录</text>
+          </view>
         </view>
       </view>
 
       <!-- 购买订单 -->
-      <view class="section" v-if="activeTab === 'purchases'">
+      <view v-if="activeTab === 'purchases'" class="section">
         <view class="item-list">
-          <view class="list-item" v-for="order in purchaseOrders" :key="order.id" @tap="showOrderDetail(order)">
+          <view v-for="order in purchaseOrders" :key="order.id" class="list-item" @tap="showOrderDetail(order)">
             <view class="list-info full">
               <text class="list-name">{{ order.goodsTitle }}</text>
-              <text class="list-detail">成交价：¥{{ order.amount }}</text>
+              <text class="list-detail">成交价：¥{{ order.amount || order.price }}</text>
               <text class="list-detail">卖家：{{ order.sellerName }}</text>
-              <text class="list-status" :class="order.status === 'completed' ? 'completed' : 'pending'">
-                {{ order.status === 'completed' ? "已完成" : "已完成" }}
-              </text>
+              <text :class="['list-status', order.status]">{{ orderStatusText(order) }}</text>
             </view>
+            <button v-if="canApplyRefund(order)" class="btn-apply-refund" @tap.stop="handleApplyRefund(order)">申请售后</button>
           </view>
-          <view class="empty" v-if="purchaseOrders.length === 0"><text>暂无购买订单</text></view>
+          <view v-if="purchaseOrders.length === 0" class="empty">
+            <text>暂无购买订单</text>
+          </view>
         </view>
       </view>
 
       <!-- 卖出订单 -->
-      <view class="section" v-if="activeTab === 'sales'">
+      <view v-if="activeTab === 'sales'" class="section">
         <view class="item-list">
-          <view class="list-item" v-for="order in sellOrders" :key="order.id" @tap="showOrderDetail(order)">
+          <view v-for="order in sellOrders" :key="order.id" class="list-item" @tap="showOrderDetail(order)">
             <view class="list-info full">
               <text class="list-name">{{ order.goodsTitle }}</text>
-              <text class="list-detail">成交价：¥{{ order.amount }}</text>
+              <text class="list-detail">成交价：¥{{ order.amount || order.price }}</text>
               <text class="list-detail">买家：{{ order.buyerName }}</text>
-              <text class="list-status" :class="order.status === 'completed' ? 'completed' : 'pending'">
-                {{ order.status === 'completed' ? "已完成" : "已完成" }}
-              </text>
+              <text :class="['list-status', order.status]">{{ order.status }}</text>
             </view>
           </view>
-          <view class="empty" v-if="sellOrders.length === 0"><text>暂无卖出订单</text></view>
+          <view v-if="sellOrders.length === 0" class="empty">
+            <text>暂无卖出订单</text>
+          </view>
         </view>
       </view>
+
+
+      <!-- 账单 -->
+      <view v-if="activeTab === 'bills'" class="section">
+        <view class="item-list">
+          <view v-for="b in bills" :key="b.id" class="list-item">
+            <view class="list-info full">
+              <view class="bill-head">
+                <text :class="[ 'bill-title', b.amount >= 0 ? 'bill-in' : 'bill-out' ]">{{ billTypeText(b.type) }}</text>
+                <text :class="[ 'bill-amount', b.amount >= 0 ? 'bill-in' : 'bill-out' ]">{{ b.amount >= 0 ? '+' : '' }}¥{{ b.amount }}</text>
+              </view>
+              <text class="list-detail">说明: {{ b.memo || "-" }}</text>
+              <text class="list-detail">时间: {{ formatTime(b.createdAt) }} | 余额: ¥{{ b.balanceAfter }}</text>
+            </view>
+          </view>
+          <view v-if="bills.length === 0" class="empty">
+            <text>暂无账单记录</text>
+          </view>
+        </view>
+      </view>
+
+          <!-- 充值二维码弹窗 -->
+  <view v-if="showQrModal" class="qr-overlay" @tap="showQrModal = false">
+    <view class="qr-box" @tap.stop>
+      <view class="qr-title">扫码支付</view>
+      <image class="qr-img" src="/static/qrcode.png" mode="widthFix" />
+      <view class="qr-amount">充值金额：<text class="qr-price">¥{{ pendingAmount }}</text></view>
+      <button class="qr-btn-pay" @tap="confirmRecharge">我已完成支付</button>
+      <button class="qr-btn-cancel" @tap="showQrModal = false">取消</button>
     </view>
+  </view>
 
     <!-- 订单详情弹窗 -->
-    <view class="modal-overlay" v-if="orderDetail" @tap="orderDetail = null">
-      <view class="modal-content" @tap.stop>
-        <view class="modal-title">订单详情</view>
-        <view class="detail-row"><text>订单编号：{{ orderDetail.id }}</text></view>
-        <view class="detail-row"><text>商品名称：{{ orderDetail.goodsTitle }}</text></view>
-        <view class="detail-row"><text>成交价格：¥{{ orderDetail.amount }}</text></view>
-        <view class="detail-row"><text>买家：{{ orderDetail.buyerName }}</text></view>
-        <view class="detail-row"><text>卖家：{{ orderDetail.sellerName }}</text></view>
-        <view class="detail-row"><text>交易状态：已完成</text></view>
-        <view class="detail-row"><text>创建时间：{{ orderDetail.createdAt }}</text></view>
-        <button class="btn-close" @tap="orderDetail = null">关闭</button>
+      <view v-if="orderDetail" class="modal-overlay" @tap="closeOrderDetail">
+        <view class="modal-content" @tap.stop>
+          <view class="modal-title">订单详情</view>
+          <view class="detail-row">
+            <text>订单编号：{{ orderDetail.id }}</text>
+          </view>
+          <view class="detail-row">
+            <text>商品名称：{{ orderDetail.goodsTitle }}</text>
+          </view>
+          <view class="detail-row">
+            <text>成交价格：¥{{ orderDetail.amount || orderDetail.price }}</text>
+          </view>
+          <view v-if="orderDetail.fee" class="detail-row">
+            <text>平台手续费：¥{{ orderDetail.fee }}</text>
+          </view>
+          <view class="detail-row">
+            <text>买家：{{ orderDetail.buyerName }}</text>
+          </view>
+          <view class="detail-row">
+            <text>卖家：{{ orderDetail.sellerName }}</text>
+          </view>
+          <view class="detail-row">
+            <text>交易状态：已完成</text>
+          </view>
+          <view class="detail-row">
+            <text>创建时间：{{ orderDetail.createdAt }}</text>
+          </view>
+          <button class="btn-close" @tap="closeOrderDetail">关闭</button>
+        </view>
       </view>
     </view>
   </view>
 </template>
 
 <script>
-import { apiGetProfile, apiRecharge, apiMyGoods, apiOffShelf, apiMyBids, apiPurchases, apiSales, apiOrderDetail } from "../../utils/api";
-import { getCurrentUserId, clearCurrentUser, getCurrentNickname } from "../../utils/storage";
+import { apiGetProfile, apiRecharge, apiMyGoods, apiMyBids, apiPurchases, apiSales, apiOffShelf, apiRelist, apiDeleteGoods, apiCancelBid, apiMyGoodsAll, apiBills, apiApplyRefund } from "../../utils/api";
+import { getCurrentUserId, clearCurrentUser } from "../../utils/storage";
 
 export default {
   data() {
@@ -133,18 +244,28 @@ export default {
       userId: null,
       profile: {},
       rechargeAmount: "",
+      showQrModal: false,
+      pendingAmount: 0,
       recharging: false,
       activeTab: "mine",
       tabs: [
-        { key: "mine", label: "我的上架" },
+        { key: "mine", label: "在售" },
+        { key: "offshelf", label: "已下架" },
+        { key: "sold", label: "已售出" },
+        { key: "pending", label: "审核中" },
         { key: "bids", label: "我的竞拍" },
         { key: "purchases", label: "购买订单" },
-        { key: "sales", label: "卖出订单" }
+        { key: "sales", label: "卖出订单" },
+        { key: "bills", label: "账单" }
       ],
       myItems: [],
+      offShelfItems: [],
+      soldItems: [],
+      pendingItems: [],
       myBids: [],
       purchaseOrders: [],
       sellOrders: [],
+      bills: [],
       orderDetail: null,
       statusMap: {
         "pending": "待审核",
@@ -156,19 +277,28 @@ export default {
     };
   },
   onShow() {
-    this.userId = getCurrentUserId();
+        this.showQrModal = false;
+this.userId = getCurrentUserId();
     if (!this.userId) {
       uni.showToast({ title: "请先登录", icon: "none" });
       return;
     }
     this.loadProfile();
     this.loadData();
+    this.loadOffShelfItems();
+    if (this.activeTab === 'bills') this.loadBills();
+    if (this.activeTab === 'sold') this.loadSoldItems();
+    if (this.activeTab === 'pending') this.loadPendingItems();
   },
   methods: {
-    goLogin() { uni.redirectTo({ url: "/pages/login/login" }); },
+    goDetail(id) { uni.navigateTo({ url: "/pages/auction/detail?id=" + id }); },
+    goLogin() {
+      uni.redirectTo({ url: "/pages/login/login" });
+    },
     handleLogout() {
       uni.showModal({
-        title: "提示", content: "确定退出登录吗？",
+        title: "提示",
+        content: "确定退出登录吗？",
         success: (res) => {
           if (res.confirm) {
             clearCurrentUser();
@@ -189,7 +319,10 @@ export default {
     async loadData() {
       try {
         const [items, bids, purchases, sales] = await Promise.all([
-          apiMyGoods(), apiMyBids(), apiPurchases(), apiSales()
+          apiMyGoods(),
+          apiMyBids(),
+          apiPurchases(),
+          apiSales()
         ]);
         this.myItems = items || [];
         this.myBids = (bids || []).map(b => {
@@ -202,170 +335,543 @@ export default {
         console.log("load data error", e);
       }
     },
-    async switchTab(key) {
-      this.activeTab = key;
-      this.loadData();
-    },
-    async handleRecharge() {
-      const amount = parseFloat(this.rechargeAmount);
-      if (isNaN(amount) || amount <= 0) return uni.showToast({ title: "请输入有效金额", icon: "none" });
-      this.recharging = true;
+        async loadBills() {
       try {
-        const updated = await apiRecharge(amount);
-        this.profile = updated;
-        uni.showToast({ title: "充值成功", icon: "success" });
-        this.rechargeAmount = "";
+        this.bills = await apiBills();
       } catch (e) {
-        uni.showToast({ title: e.message, icon: "none" });
-      } finally {
-        this.recharging = false;
+        console.log("load bills error", e);
+        this.bills = [];
       }
     },
-    getStatusText(item) {
-      if (item.status === "on_sale") {
-        const end = new Date(item.endAt.replace(" ", "T")).getTime();
-        return end > Date.now() ? "竞拍中" : "已结束";
-      }
-      return this.statusMap[item.status] || item.status;
+    billTypeText(t) {
+      const map = {
+        recharge: "充值",
+        place_bid: "出价扣款",
+        bid_refund: "出价退款",
+        cancel_refund: "取消退款",
+        offshelf_refund: "下架退款",
+        sold_income: "卖出收入",
+        sold_fee: "平台手续费",
+        after_sale_refund: "售后退款",
+        after_sale_payback: "售后扣款"
+      };
+      return map[t] || t;
     },
-    async delistItem(item) {
+    formatTime(t) {
+      if (!t) return "";
+      return String(t).replace("T", " ").substring(0, 16);
+    },
+switchTab(key) {
+      this.activeTab = key;
+      if (key === "offshelf") this.loadOffShelfItems();
+      if (key === "bills") this.loadBills();
+      if (key === "sold") this.loadSoldItems();
+      if (key === "pending") this.loadPendingItems();
+    },
+    async loadOffShelfItems() {
+      try {
+        const items = await apiMyGoodsAll("off_shelf", "");
+        this.offShelfItems = (items || []).filter(i => i.status === "off_shelf");
+      } catch (e) {
+        console.log("load off-shelf error", e);
+      }
+    },
+    async loadSoldItems() {
+      try {
+        const items = await apiMyGoodsAll("sold", "");
+        this.soldItems = (items || []).filter(i => i.status === "sold");
+      } catch (e) {
+        console.log("load sold error", e);
+      }
+    },
+    async loadPendingItems() {
+      try {
+        const items = await apiMyGoodsAll("pending", "");
+        this.pendingItems = (items || []).filter(i => i.status === "pending");
+      } catch (e) {
+        console.log("load pending error", e);
+      }
+    },
+    orderStatusText(order) {
+      const base = { paid: "已完成", refunded: "已退款", cancelled: "已取消" };
+      const baseText = base[order.status] || order.status;
+      const afterText = (() => { const m = { none: "", pending: "售后审核中", refunded: "已退款", rejected: "已被驳回" }; return m[order.afterSaleStatus] || ""; })();
+      return afterText ? baseText + " | " + afterText : baseText;
+    },
+    canApplyRefund(order) {
+      return order && order.status === "paid" && (!order.afterSaleStatus || order.afterSaleStatus === "none");
+    },
+    handleApplyRefund(order) {
       uni.showModal({
-        title: "确认下架",
-        content: '确定下架商品「' + item.title + '」吗？',
+        title: "申请售后",
+        editable: true,
+        placeholderText: "请输入退款原因",
+        success: async (r) => {
+          if (!r.confirm) return;
+          try {
+            await apiApplyRefund(order.id, r.content || "");
+            uni.showToast({ title: "已提交,等待管理员审核", icon: "success" });
+            this.loadData();
+          } catch (e) {
+            uni.showToast({ title: e?.message || "提交失败", icon: "none" });
+          }
+        }
+      });
+    },
+    bidStatusText(bid) {
+      if (bid.status === "won") return "已中标";
+      if (bid.status === "cancelled") return "已取消";
+      if (bid.status === "outbid") return "已被超越";
+      return bid.isLeading ? "领先" : "出局";
+    },
+    bidStatusClass(bid) {
+      if (bid.status === "won") return "won";
+      if (bid.status === "cancelled") return "outbid";
+      if (bid.status === "outbid") return "outbid";
+      return bid.isLeading ? "leading" : "outbid";
+    },
+    async handleCancelBid(bid) {
+      uni.showModal({
+        title: "确认取消出价",
+        content: "取消后 ¥" + bid.price + " 将退还到您的余额",
         success: async (res) => {
           if (res.confirm) {
             try {
-              await apiOffShelf(item.id);
-              uni.showToast({ title: "下架成功", icon: "success" });
-              this.myItems = await apiMyGoods();
+              await apiCancelBid(bid.id);
+              uni.showToast({ title: "已取消,款项已退还", icon: "success" });
+              this.loadData();
             } catch (e) {
-              uni.showToast({ title: e.message, icon: "none" });
+              uni.showToast({ title: e?.message || "取消失败", icon: "none" });
             }
           }
         }
       });
     },
-    async showOrderDetail(order) {
+    async handleRelist(id) {
+      uni.showModal({
+        title: "确认重新上架",
+        content: "重新上架后,价格将重置为起拍价,历史出价者的款项将退还",
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              await apiRelist(id);
+              uni.showToast({ title: "已重新上架", icon: "success" });
+              this.loadOffShelfItems();
+            } catch (e) {
+              uni.showToast({ title: e?.message || "操作失败", icon: "none" });
+            }
+          }
+        }
+      });
+    },
+    async handleDelete(id) {
+      uni.showModal({
+        title: "确认删除",
+        content: "删除后商品不可恢复,所有未退款的出价将退还给买家",
+        confirmText: "确认删除",
+        confirmColor: "#ff4d4f",
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              await apiDeleteGoods(id);
+              uni.showToast({ title: "已删除", icon: "success" });
+              this.loadOffShelfItems();
+            } catch (e) {
+              uni.showToast({ title: e?.message || "删除失败", icon: "none" });
+            }
+          }
+        }
+      });
+    },
+        async handleRecharge() {
+      const amount = parseFloat(this.rechargeAmount);
+      if (isNaN(amount) || amount <= 0) return uni.showToast({ title: "请输入有效金额", icon: "none" });
+      this.pendingAmount = amount;
+      this.showQrModal = true;
+    },
+
+    async confirmRecharge() {
+      this.showQrModal = false;
+      this.recharging = true;
       try {
-        this.orderDetail = await apiOrderDetail(order.id);
+        const updated = await apiRecharge(this.pendingAmount);
+        this.profile = updated;
+        uni.showToast({ title: "充值成功", icon: "success" });
+        this.rechargeAmount = "";
+        this.pendingAmount = 0;
       } catch (e) {
-        this.orderDetail = order;
+        uni.showToast({ title: e?.message || "充值失败", icon: "none" });
+      } finally {
+        this.recharging = false;
       }
+    },
+    async handleDelist(id) {
+      try {
+        await apiOffShelf(id);
+        uni.showToast({ title: "下架成功", icon: "success" });
+        this.loadData();
+      } catch (e) {
+        uni.showToast({ title: e?.message || "下架失败", icon: "none" });
+      }
+    },
+    showOrderDetail(order) {
+      this.orderDetail = order;
+    },
+    closeOrderDetail() {
+      this.orderDetail = null;
     }
   }
 };
 </script>
 
 <style scoped>
-.user-page { padding: 30rpx; background: #f5f5f5; min-height: 100vh; }
+.user-page {
+  padding: 20rpx;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
 .login-tip {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  min-height: 60vh; font-size: 32rpx; color: #999;
+  text-align: center;
+  padding: 100rpx 40rpx;
 }
 .btn-login {
-  margin-top: 30rpx; background: #007AFF; color: #fff;
-  padding: 16rpx 60rpx; border-radius: 16rpx; font-size: 28rpx;
+  margin-top: 40rpx;
+  background: #007AFF;
+  color: #fff;
+  border-radius: 16rpx;
+  padding: 20rpx 60rpx;
+  display: inline-block;
 }
-.btn-login::after { border: none; }
 .user-card {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border-radius: 24rpx; padding: 40rpx;
-  margin-bottom: 24rpx; position: relative; color: #fff;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 40rpx 30rpx;
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
 }
 .avatar {
-  width: 100rpx; height: 100rpx; border-radius: 50%;
-  background: rgba(255,255,255,0.3);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 44rpx; font-weight: 600; margin-bottom: 16rpx;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: #007AFF;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  font-weight: bold;
+  flex-shrink: 0;
 }
-.user-info { margin-bottom: 16rpx; }
-.nickname { font-size: 34rpx; font-weight: 600; display: block; }
-.phone { font-size: 24rpx; opacity: 0.8; display: block; margin-top: 6rpx; }
-.balance-area { display: flex; align-items: baseline; gap: 12rpx; }
-.balance-label { font-size: 26rpx; opacity: 0.9; }
-.balance-value { font-size: 40rpx; font-weight: 700; }
+.user-info {
+  flex: 1;
+  margin-left: 24rpx;
+}
+.nickname {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+}
+.phone {
+  font-size: 24rpx;
+  color: #999;
+  display: block;
+  margin-top: 8rpx;
+}
+.balance-area {
+  text-align: right;
+  margin-left: 20rpx;
+}
+.balance-label {
+  font-size: 22rpx;
+  color: #999;
+  display: block;
+}
+.balance-value {
+  font-size: 32rpx;
+  color: #ff6b35;
+  font-weight: 600;
+  display: block;
+}
 .btn-logout {
-  position: absolute; top: 24rpx; right: 24rpx;
-  background: rgba(255,255,255,0.2); color: #fff;
-  font-size: 22rpx; padding: 8rpx 24rpx; border-radius: 10rpx;
-  border: none; line-height: 2;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 24rpx;
+  border-radius: 8rpx;
+  padding: 8rpx 20rpx;
+  margin-left: 20rpx;
+  border: none;
 }
-.btn-logout::after { border: none; }
-.recharge-section { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 20rpx; }
-.section-title { font-size: 28rpx; font-weight: 600; color: #333; display: block; margin-bottom: 16rpx; }
-.recharge-row { display: flex; gap: 16rpx; align-items: center; }
+.section {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+}
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 20rpx;
+}
+.recharge-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
 .recharge-input {
-  flex: 1; height: 68rpx; border: 2rpx solid #e0e0e0;
-  border-radius: 12rpx; padding: 0 16rpx; font-size: 28rpx;
-  background: #fafafa; box-sizing: border-box;
+  flex: 1;
+  height: 72rpx;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  background: #fafafa;
 }
 .btn-recharge {
-  background: #27ae60; color: #fff; padding: 12rpx 36rpx;
-  border-radius: 12rpx; font-size: 26rpx; flex-shrink: 0;
-  border: none; line-height: 2;
+  background: #007AFF;
+  color: #fff;
+  border-radius: 12rpx;
+  padding: 16rpx 30rpx;
+  font-size: 26rpx;
+  border: none;
 }
-.btn-recharge::after { border: none; }
-.btn-recharge[disabled] { opacity: 0.6; }
 .tab-bar {
-  display: flex; background: #fff; border-radius: 12rpx;
-  overflow: hidden; margin-bottom: 20rpx;
+  background: #fff;
+  white-space: nowrap;
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
 }
 .tab-item {
-  flex: 1; text-align: center; padding: 20rpx 0;
-  font-size: 26rpx; color: #666;
-  border-bottom: 4rpx solid transparent;
+  display: inline-block;
+  text-align: center;
+  padding: 24rpx 36rpx;
+  font-size: 26rpx;
+  color: #666;
+  position: relative;
 }
-.tab-item.active { color: #007AFF; border-bottom-color: #007AFF; font-weight: 600; }
-.section { margin-bottom: 20rpx; }
-.item-list { background: #fff; border-radius: 16rpx; overflow: hidden; }
+.tab-item.active {
+  color: #007AFF;
+  font-weight: 600;
+}
+.tab-item.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 4rpx;
+  background: #007AFF;
+  border-radius: 2rpx;
+}
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
 .list-item {
-  display: flex; align-items: center; padding: 24rpx;
-  border-bottom: 2rpx solid #f0f0f0; gap: 16rpx;
+  display: flex;
+  align-items: center;
+  background: #fafafa;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  gap: 20rpx;
 }
-.list-item:last-child { border-bottom: none; }
 .list-thumb {
-  width: 100rpx; height: 100rpx; border-radius: 10rpx;
-  background: #e0e0e0; flex-shrink: 0;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+  background: #eee;
 }
-.list-info { flex: 1; min-width: 0; }
-.list-info.full { flex: 1; }
+.list-info {
+  flex: 1;
+  min-width: 0;
+}
+.list-info.full {
+  width: 100%;
+}
 .list-name {
-  font-size: 28rpx; font-weight: 500; color: #333;
-  display: block; margin-bottom: 6rpx;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.list-detail { font-size: 24rpx; color: #888; display: block; line-height: 1.6; }
+.list-detail {
+  font-size: 24rpx;
+  color: #888;
+  display: block;
+  margin-top: 6rpx;
+}
 .list-status {
-  font-size: 24rpx; font-weight: 600; display: inline-block;
-  margin-top: 6rpx; padding: 4rpx 16rpx; border-radius: 8rpx;
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 6rpx;
+  display: inline-block;
+  margin-top: 8rpx;
 }
-.list-status.leading { color: #27ae60; background: #e8f8e8; }
-.list-status.outbid { color: #e74c3c; background: #fde8e8; }
-.list-status.completed { color: #27ae60; background: #e8f8e8; }
-.list-status.pending { color: #f39c12; background: #fef9e7; }
+.list-status.leading {
+  background: #e6f7ee;
+  color: #07c160;
+}
+.list-status.outbid {
+  background: #fff5e6;
+  color: #ff8800;
+}
 .btn-delist {
-  background: #e74c3c; color: #fff; padding: 8rpx 24rpx;
-  border-radius: 10rpx; font-size: 24rpx; border: none; flex-shrink: 0; line-height: 2;
+  background: #ff4d4f;
+  color: #fff;
+  border-radius: 8rpx;
+  padding: 12rpx 24rpx;
+  font-size: 24rpx;
+  border: none;
+  flex-shrink: 0;
 }
-.btn-delist::after { border: none; }
+.status-tag.won { background: #e6f7ee; color: #07c160; }
+.status-tag.outbid { background: #fff5e6; color: #ff8800; }
+.btn-group { display: flex; flex-direction: column; gap: 12rpx; flex-shrink: 0; }
+.btn-relist, .btn-delete, .btn-cancel-bid {
+  font-size: 22rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 8rpx;
+  border: none;
+  line-height: 1.4;
+}
+.btn-relist { background: #007AFF; color: #fff; }
+.btn-delete { background: #ff4d4f; color: #fff; }
+.btn-cancel-bid { background: #fff5e6; color: #ff8800; }
+.btn-relist::after, .btn-delete::after, .btn-cancel-bid::after { border: none; }
 .status-tag {
-  font-size: 24rpx; color: #999; background: #f0f0f0;
-  padding: 8rpx 20rpx; border-radius: 10rpx; flex-shrink: 0;
+  font-size: 22rpx;
+  color: #999;
+  flex-shrink: 0;
 }
-.empty { padding: 60rpx; text-align: center; color: #bbb; font-size: 26rpx; }
+.empty {
+  text-align: center;
+  padding: 60rpx 0;
+  color: #999;
+  font-size: 26rpx;
+}
 .modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.modal-content {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 40rpx;
+  width: 80%;
+  max-width: 600rpx;
+}
+.modal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 30rpx;
+  color: #333;
+}
+.detail-row {
+  font-size: 26rpx;
+  color: #666;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.btn-close {
+  margin-top: 30rpx;
+  background: #007AFF;
+  color: #fff;
+  border-radius: 12rpx;
+  padding: 20rpx 0;
+  font-size: 28rpx;
+  border: none;
+  width: 100%;
+}
+
+.bill-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-bottom: 12rpx; margin-bottom: 8rpx; border-bottom: 1rpx solid #f0f0f0;
+}
+.bill-title { font-size: 28rpx; font-weight: 500; }
+.bill-amount { font-size: 32rpx; font-weight: 600; }
+.bill-in { color: #34c759; }
+.bill-out { color: #e74c3c; }
+
+
+.btn-apply-refund {
+  background: #fff5f0; color: #ff6b35; border: 1rpx solid #ff6b35;
+  font-size: 24rpx; padding: 12rpx 24rpx; border-radius: 8rpx;
+  margin-top: 12rpx; line-height: 1; height: auto;
+}
+.btn-apply-refund::after { border: none; }
+
+
+.qr-modal { align-items: center; text-align: center; }
+.qr-image { width: 360rpx; height: 360rpx; margin: 20rpx auto; display: block; }
+.qr-hint { font-size: 22rpx; color: #888; display: block; margin-bottom: 6rpx; }
+.qr-amount { font-size: 30rpx; color: #e74c3c; font-weight: 600; display: block; margin-bottom: 30rpx; }
+.btn-confirm-pay {
+  width: 100%; height: 76rpx; line-height: 76rpx;
+  background: linear-gradient(135deg, #27ae60, #1e8449);
+  color: #fff; font-size: 30rpx; border-radius: 12rpx;
+  border: none; margin-bottom: 16rpx;
+}
+.btn-confirm-pay::after { border: none; }
+.btn-cancel-pay {
+  width: 100%; height: 68rpx; line-height: 68rpx;
+  background: #f0f0f0; color: #666; font-size: 28rpx;
+  border-radius: 12rpx; border: none;
+}
+.btn-cancel-pay::after { border: none; }
+
+
+.qr-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5); z-index: 999;
+  background: rgba(0,0,0,0.8); z-index: 99999;
   display: flex; align-items: center; justify-content: center;
 }
-.modal-content { width: 600rpx; background: #fff; border-radius: 24rpx; padding: 40rpx; }
-.modal-title { font-size: 34rpx; font-weight: 600; text-align: center; margin-bottom: 32rpx; }
-.detail-row { margin-bottom: 16rpx; font-size: 26rpx; color: #555; }
-.btn-close {
-  width: 100%; height: 72rpx; line-height: 72rpx;
-  background: #f0f0f0; color: #666; border-radius: 12rpx;
-  font-size: 28rpx; margin-top: 24rpx; border: none; text-align: center;
+.qr-box {
+  width: 96vw; max-width: 780rpx; background: #fff;
+  border-radius: 16rpx; padding: 10rpx; text-align: center;
+  display: flex; flex-direction: column; align-items: center;
 }
-.btn-close::after { border: none; }
+.qr-title {
+  font-size: 28rpx; font-weight: 600; color: #333;
+  margin: 4rpx 0; padding: 0;
+}
+.qr-img {
+  width: 93vw; max-width: 750rpx; height: auto;
+  display: block; margin: 2rpx auto;
+}
+.qr-amount {
+  font-size: 24rpx; color: #e74c3c; font-weight: 600;
+  margin: 4rpx 0 6rpx 0;
+}
+.qr-btn-pay {
+  width: 93vw; max-width: 750rpx; height: 68rpx; line-height: 68rpx;
+  background: linear-gradient(135deg, #27ae60, #1e8449);
+  color: #fff; font-size: 26rpx; border-radius: 10rpx; border: none; margin-bottom: 6rpx;
+}
+.qr-btn-pay::after { border: none; }
+.qr-btn-cancel {
+  width: 93vw; max-width: 750rpx; height: 60rpx; line-height: 60rpx;
+  background: #f0f0f0; color: #666; font-size: 24rpx; border-radius: 10rpx; border: none;
+}
+.qr-btn-cancel::after { border: none; }
+
 </style>
+
+

@@ -4,7 +4,6 @@ export interface UserItem {
   id: number
   username: string
   nickname: string
-  role: 'buyer' | 'seller'
   balance: number
   status: 'active' | 'banned'
   createdAt: string
@@ -55,4 +54,21 @@ export interface AfterSaleItem {
 export interface SysConfig {
   minIncrement: number
   feeRate: number // 0~1
+}
+
+
+export interface OrderItem {
+  id: number
+  goodsId: number
+  goodsTitle: string
+  goodsCover: string
+  buyerId: number
+  buyerName: string
+  sellerId: number
+  sellerName: string
+  amount: number
+  fee: number
+  status: 'paid' | 'refunded' | 'cancelled'
+  afterSaleStatus: 'none' | 'pending' | 'refunded' | 'rejected'
+  createdAt: string
 }

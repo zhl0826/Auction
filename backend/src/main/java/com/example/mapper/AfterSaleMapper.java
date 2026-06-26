@@ -9,4 +9,6 @@ import java.util.List;
 public interface AfterSaleMapper {
     List<AfterSale> list();
     int updateStatus(@Param("id") Long id, @Param("status") String status);
+    AfterSale findById(@Param("id") Long id);
+    int insert(AfterSale afterSale);
 }

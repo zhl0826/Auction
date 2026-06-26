@@ -7,6 +7,10 @@ spring:
     url: jdbc:mysql://localhost:3306/auction?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     username: root
     password: 788230asdf
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -14,3 +18,8 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+ai:
+  dashscope:
+    api-key: sk-ws-H.RYIDRXR.4h5S.MEYCIQDKL3MwWRWUykFxw_b1PtckR4TUxaZQnlKFRA06Ln77igIhAM2OLibsmLm5sAiEU5dsiIuzM_5u2N8d3fnqkFge2i5z
+    model: qwen-plus

@@ -2,9 +2,11 @@ package com.example.service.impl;
 
 import com.example.entity.User;
 import com.example.mapper.UserMapper;
+import com.example.service.BillService;
 import com.example.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +14,7 @@ import java.util.Map;
 @Service
 public class UserServiceImpl implements UserService {
     @Autowired private UserMapper userMapper;
+    @Autowired private BillService billService;
 
     @Override
     public Map<String, Object> page(String keyword, String role, String status, int page, int size) {
@@ -38,11 +41,25 @@ public class UserServiceImpl implements UserService {
         u.setUsername(username);
         u.setPassword(password);
         u.setNickname(nickname);
-        u.setRole("buyer");
         u.setBalance(java.math.BigDecimal.ZERO);
         u.setStatus("active");
+        u.setRole("");
+        u.setPhone(phone);
         userMapper.insert(u);
         return u;
+    }
+
+    
+    /** 充值: 加余额 + 写流水 */
+    @Override
+    @Transactional
+    public User recharge(Long userId, java.math.BigDecimal amount) {
+        User u = userMapper.findById(userId);
+        if (u == null) throw new RuntimeException("用户不存在");
+        java.math.BigDecimal newBalance = u.getBalance().add(amount);
+        userMapper.updateBalance(userId, newBalance);
+        billService.record(userId, "recharge", amount, "recharge", null, "充值");
+        return userMapper.findById(userId);
     }
 
     @Override

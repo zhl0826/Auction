@@ -10,5 +10,6 @@ public interface UserService {
     User login(String username, String password);
     User register(String username, String password, String nickname, String phone);
     User updateBalance(Long id, java.math.BigDecimal balance);
+    User recharge(Long userId, java.math.BigDecimal amount);
     User getById(Long id);
 }

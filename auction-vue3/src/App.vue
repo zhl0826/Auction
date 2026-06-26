@@ -1,4 +1,4 @@
-﻿<script>
+<script>
 import { getCurrentUserId } from './utils/storage';
 export default {
   globalData: {

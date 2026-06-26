@@ -10,15 +10,17 @@ public class Goods {
     private Long id;
     private String title;
     private String type;
-    private Long sellerId;          // 关联 user.id
-    private String sellerName;      // 联表展示
+    private Long sellerId;
+    private String sellerName;
     private BigDecimal startPrice;
     private BigDecimal currentPrice;
     private BigDecimal minIncrement;
     private String cover;
     private String description;
-    private String status;          // pending / on_sale / sold / off_shelf / rejected
+    private String status;
     private String rejectReason;
+    private Long currentBidderId;     // 当前最高出价人
+    private String currentBidderName; // 当前最高出价人昵称
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endAt;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

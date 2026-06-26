@@ -19,7 +19,8 @@ const menus = computed(() => {
     { path: '/auction/review', title: '商品审核', icon: 'Document' },
     { path: '/auction/onsale', title: '已上架商品', icon: 'Goods' },
       // 竞拍历史改为从已上架商品点入，不再显示在侧边栏
-    { path: '/auction/aftersale', title: '售后处理', icon: 'Service' }
+    { path: '/auction/aftersale', title: '售后处理', icon: 'Service' },
+    { path: '/auction/orders', title: '已成交商品', icon: 'List' }
   ]
 })
 
