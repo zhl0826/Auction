@@ -22,4 +22,5 @@ public interface GoodsService {
     void closeAuction(Long goodsId, Long userId);
     void finishExpired(Long goodsId);
     int checkAllExpired();
+    List<Goods> listSoldByType(String type, Integer limit);
 }

@@ -1,4 +1,5 @@
-<template>
+﻿<template>
+
   <view class="user-page">
     <view v-if="!userId" class="login-tip">
       <text>请先登录</text>
@@ -187,7 +188,18 @@
         </view>
       </view>
 
-      <!-- 订单详情弹窗 -->
+          <!-- 充值二维码弹窗 -->
+  <view v-if="showQrModal" class="qr-overlay" @tap="showQrModal = false">
+    <view class="qr-box" @tap.stop>
+      <view class="qr-title">扫码支付</view>
+      <image class="qr-img" src="/static/qrcode.png" mode="widthFix" />
+      <view class="qr-amount">充值金额：<text class="qr-price">¥{{ pendingAmount }}</text></view>
+      <button class="qr-btn-pay" @tap="confirmRecharge">我已完成支付</button>
+      <button class="qr-btn-cancel" @tap="showQrModal = false">取消</button>
+    </view>
+  </view>
+
+    <!-- 订单详情弹窗 -->
       <view v-if="orderDetail" class="modal-overlay" @tap="closeOrderDetail">
         <view class="modal-content" @tap.stop>
           <view class="modal-title">订单详情</view>
@@ -232,6 +244,8 @@ export default {
       userId: null,
       profile: {},
       rechargeAmount: "",
+      showQrModal: false,
+      pendingAmount: 0,
       recharging: false,
       activeTab: "mine",
       tabs: [
@@ -263,7 +277,8 @@ export default {
     };
   },
   onShow() {
-    this.userId = getCurrentUserId();
+        this.showQrModal = false;
+this.userId = getCurrentUserId();
     if (!this.userId) {
       uni.showToast({ title: "请先登录", icon: "none" });
       return;
@@ -468,15 +483,22 @@ switchTab(key) {
         }
       });
     },
-    async handleRecharge() {
+        async handleRecharge() {
       const amount = parseFloat(this.rechargeAmount);
       if (isNaN(amount) || amount <= 0) return uni.showToast({ title: "请输入有效金额", icon: "none" });
+      this.pendingAmount = amount;
+      this.showQrModal = true;
+    },
+
+    async confirmRecharge() {
+      this.showQrModal = false;
       this.recharging = true;
       try {
-        const updated = await apiRecharge(amount);
+        const updated = await apiRecharge(this.pendingAmount);
         this.profile = updated;
         uni.showToast({ title: "充值成功", icon: "success" });
         this.rechargeAmount = "";
+        this.pendingAmount = 0;
       } catch (e) {
         uni.showToast({ title: e?.message || "充值失败", icon: "none" });
       } finally {
@@ -796,4 +818,60 @@ switchTab(key) {
 }
 .btn-apply-refund::after { border: none; }
 
+
+.qr-modal { align-items: center; text-align: center; }
+.qr-image { width: 360rpx; height: 360rpx; margin: 20rpx auto; display: block; }
+.qr-hint { font-size: 22rpx; color: #888; display: block; margin-bottom: 6rpx; }
+.qr-amount { font-size: 30rpx; color: #e74c3c; font-weight: 600; display: block; margin-bottom: 30rpx; }
+.btn-confirm-pay {
+  width: 100%; height: 76rpx; line-height: 76rpx;
+  background: linear-gradient(135deg, #27ae60, #1e8449);
+  color: #fff; font-size: 30rpx; border-radius: 12rpx;
+  border: none; margin-bottom: 16rpx;
+}
+.btn-confirm-pay::after { border: none; }
+.btn-cancel-pay {
+  width: 100%; height: 68rpx; line-height: 68rpx;
+  background: #f0f0f0; color: #666; font-size: 28rpx;
+  border-radius: 12rpx; border: none;
+}
+.btn-cancel-pay::after { border: none; }
+
+
+.qr-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8); z-index: 99999;
+  display: flex; align-items: center; justify-content: center;
+}
+.qr-box {
+  width: 96vw; max-width: 780rpx; background: #fff;
+  border-radius: 16rpx; padding: 10rpx; text-align: center;
+  display: flex; flex-direction: column; align-items: center;
+}
+.qr-title {
+  font-size: 28rpx; font-weight: 600; color: #333;
+  margin: 4rpx 0; padding: 0;
+}
+.qr-img {
+  width: 93vw; max-width: 750rpx; height: auto;
+  display: block; margin: 2rpx auto;
+}
+.qr-amount {
+  font-size: 24rpx; color: #e74c3c; font-weight: 600;
+  margin: 4rpx 0 6rpx 0;
+}
+.qr-btn-pay {
+  width: 93vw; max-width: 750rpx; height: 68rpx; line-height: 68rpx;
+  background: linear-gradient(135deg, #27ae60, #1e8449);
+  color: #fff; font-size: 26rpx; border-radius: 10rpx; border: none; margin-bottom: 6rpx;
+}
+.qr-btn-pay::after { border: none; }
+.qr-btn-cancel {
+  width: 93vw; max-width: 750rpx; height: 60rpx; line-height: 60rpx;
+  background: #f0f0f0; color: #666; font-size: 24rpx; border-radius: 10rpx; border: none;
+}
+.qr-btn-cancel::after { border: none; }
+
 </style>
+
+

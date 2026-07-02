@@ -1,3 +1,4 @@
+USE `auction`;
 -- MySQL dump 10.13  Distrib 8.3.0, for Win64 (x86_64)
 --
 -- Host: localhost    Database: auction
@@ -177,6 +178,30 @@ INSERT INTO `goods` (`id`, `title`, `type`, `seller_id`, `start_price`, `current
 UNLOCK TABLES;
 
 --
+-- Table structure for table `goods_vector`
+--
+
+DROP TABLE IF EXISTS `goods_vector`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `goods_vector` (
+  `goods_id` bigint NOT NULL,
+  `embedding` json DEFAULT NULL COMMENT '向量嵌入',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`goods_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `goods_vector`
+--
+
+LOCK TABLES `goods_vector` WRITE;
+/*!40000 ALTER TABLE `goods_vector` DISABLE KEYS */;
+/*!40000 ALTER TABLE `goods_vector` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `order`
 --
 
@@ -206,7 +231,7 @@ CREATE TABLE `order` (
 
 LOCK TABLES `order` WRITE;
 /*!40000 ALTER TABLE `order` DISABLE KEYS */;
-INSERT INTO `order` (`id`, `goods_id`, `goods_title`, `buyer_id`, `seller_id`, `amount`, `status`, `created_at`, `fee`, `after_sale_status`) VALUES (1,4,'iPhone 15 Pro',1,4,7100.00,'paid','2026-06-12 09:22:59',142.00,'rejected'),(2,8,'bao',2,1,500.00,'completed','2026-06-23 17:17:38',0.00,'none'),(3,8,'bao',2,1,510.00,'completed','2026-06-23 17:18:54',0.00,'none'),(4,4,'iPhone 15 Pro',4,4,7100.00,'cancelled','2026-06-23 18:34:05',0.00,'none'),(5,3,'Nike Air Max',2,3,480.00,'paid','2026-06-23 18:34:05',9.60,'none'),(6,7,'1',3,1,80.00,'paid','2026-06-23 18:49:53',1.60,'none'),(7,5,'iphone 17',3,1,6000.00,'refunded','2026-06-23 19:23:59',120.00,'refunded'),(8,9,'Air pods',1,3,500.00,'refunded','2026-06-23 20:00:46',10.00,'refunded');
+INSERT INTO `order` (`id`, `goods_id`, `goods_title`, `buyer_id`, `seller_id`, `amount`, `status`, `created_at`, `fee`, `after_sale_status`) VALUES (1,4,'iPhone 15 Pro',1,4,7100.00,'paid','2026-06-12 09:22:59',142.00,'rejected'),(2,8,'bao',2,1,500.00,'cancelled','2026-06-23 17:17:38',0.00,'none'),(3,8,'bao',2,1,510.00,'cancelled','2026-06-23 17:18:54',0.00,'none'),(4,4,'iPhone 15 Pro',4,4,7100.00,'cancelled','2026-06-23 18:34:05',0.00,'none'),(5,3,'Nike Air Max',2,3,480.00,'paid','2026-06-23 18:34:05',9.60,'none'),(6,7,'1',3,1,80.00,'paid','2026-06-23 18:49:53',1.60,'none'),(7,5,'iphone 17',3,1,6000.00,'refunded','2026-06-23 19:23:59',120.00,'refunded'),(8,9,'Air pods',1,3,500.00,'refunded','2026-06-23 20:00:46',10.00,'refunded');
 /*!40000 ALTER TABLE `order` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -290,7 +315,7 @@ CREATE TABLE `user` (
 
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
-INSERT INTO `user` (`id`, `username`, `password`, `nickname`, `role`, `balance`, `status`, `created_at`) VALUES (1,'user01','123456','小明','',13490.00,'active','2026-06-12 09:22:59'),(2,'user02','123456','小红','',1510.00,'active','2026-06-12 09:22:59'),(3,'user03','123456','老王','',6010.00,'active','2026-06-12 09:22:59'),(4,'seller02','123456','阿强','',0.00,'banned','2026-06-12 09:22:59');
+INSERT INTO `user` (`id`, `username`, `password`, `nickname`, `role`, `balance`, `status`, `created_at`) VALUES (1,'user01','123456','小明','',13490.00,'active','2026-06-12 09:22:59'),(2,'user02','123456','小红','',1510.00,'active','2026-06-12 09:22:59'),(3,'user03','123456','老王','',6010.00,'active','2026-06-12 09:22:59'),(4,'user04','123456','阿强','',0.00,'banned','2026-06-12 09:22:59');
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -303,4 +328,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-06-24  0:08:55
+-- Dump completed on 2026-06-30 13:57:44

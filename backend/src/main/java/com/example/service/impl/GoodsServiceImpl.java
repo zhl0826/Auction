@@ -349,4 +349,8 @@ bidMapper.updateStatus(topBid.getId(), "won");
         return n;
     }
 
+    @Override
+    public List<Goods> listSoldByType(String type, Integer limit) {
+        return mapper.listSoldByType(type, limit != null ? limit : 10);
+    }
 }

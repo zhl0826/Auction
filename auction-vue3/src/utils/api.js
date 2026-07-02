@@ -1,6 +1,6 @@
 /**
- * utils/api.js ?后端 API 调用封装
- * 所有用户端接口统一通过此模块调? */
+ * utils/api.js — 后端 API 调用封装
+ * 所有用户端接口统一通过此模块调用 */
 
 const API_BASE = "http://127.0.0.1:8080/api/user-api";
 const UPLOAD_BASE = "http://127.0.0.1:8080/api/upload";
@@ -208,4 +208,19 @@ export function apiApplyRefund(orderId, reason) {
 
 export function apiOrderDetail(id) {
   return request("GET", "/order/" + id, null, false);
+}
+
+
+// ==================== AI 拍品描述 ====================
+export function apiAiDescription(data) {
+  return request("POST", "/goods/ai-description", data);
+}
+
+// ==================== AI 估价 ====================
+export function apiAiValuation(data) {
+  return request("POST", "/goods/ai-valuation", data);
+}
+
+export function apiAiValuationChat(sessionId, message) {
+  return request("POST", "/goods/ai-valuation/chat", { sessionId, message });
 }
