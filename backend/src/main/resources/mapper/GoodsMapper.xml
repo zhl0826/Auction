@@ -99,5 +99,13 @@
     <update id="updateEndAt">
         UPDATE goods SET end_at = #{endAt} WHERE id = #{id}
     </update>
+    <select id="listSoldByType" resultMap="map">
+        SELECT g.*, u.nickname AS seller_name
+        FROM goods g LEFT JOIN user u ON g.seller_id = u.id
+        WHERE g.status IN ('sold', 'on_sale')
+        AND g.end_at IS NOT NULL
+        <if test="type != null and type != ''">AND g.type = #{type}</if>
+        ORDER BY g.end_at DESC
+        LIMIT #{limit}
+    </select>
 </mapper>
-

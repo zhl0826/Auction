@@ -43,6 +43,8 @@ public class UserServiceImpl implements UserService {
         u.setNickname(nickname);
         u.setBalance(java.math.BigDecimal.ZERO);
         u.setStatus("active");
+        u.setRole("");
+        u.setPhone(phone);
         userMapper.insert(u);
         return u;
     }

@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8080
 
 spring:
@@ -18,3 +18,8 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+ai:
+  dashscope:
+    api-key: sk-ws-H.RYIDRXR.4h5S.MEYCIQDKL3MwWRWUykFxw_b1PtckR4TUxaZQnlKFRA06Ln77igIhAM2OLibsmLm5sAiEU5dsiIuzM_5u2N8d3fnqkFge2i5z
+    model: qwen-plus

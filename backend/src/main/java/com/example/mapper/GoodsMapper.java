@@ -22,4 +22,5 @@ public interface GoodsMapper {
     int updateEndAt(@Param("id") Long id, @Param("endAt") java.time.LocalDateTime endAt);
     List<Goods> listByStatusIncludingRemoved(@Param("sellerId") Long sellerId, @Param("keyword") String keyword, @Param("status") String status);
     int deleteById(@Param("id") Long id);
+    List<Goods> listSoldByType(@Param("type") String type, @Param("limit") Integer limit);
 }
